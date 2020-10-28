@@ -27,7 +27,7 @@ sensor:
 
 -  prometheus_query
 
-  (string)(Required) the PromQL query to retrieva sensor 
+  (string)(Required) the PromQL query to retrieve sensor 
 
 -  unit_of_measurement
 
