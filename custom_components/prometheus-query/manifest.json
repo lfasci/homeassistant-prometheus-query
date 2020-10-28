@@ -1,0 +1,8 @@
+{
+  "domain": "prometheus-query",
+  "name": "Prometheus query sensor",
+  "documentation": "",
+  "dependencies": [],
+  "codeowners": ["lfasci"],
+  "requirements": ["prometheus_client","requests"]
+}
