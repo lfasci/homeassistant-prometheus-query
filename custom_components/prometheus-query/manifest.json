@@ -1,8 +1,8 @@
 {
-  "domain": "prometheus-query",
+  "domain": "prometheus_query",
   "name": "Prometheus query sensor",
-  "documentation": "",
-  "dependencies": [],
+  "documentation": "https://github.com/lfasci/homeassistant-prometheus-query",
+  "dependencies": "prometheus_client",
   "codeowners": ["lfasci"],
   "requirements": ["prometheus_client","requests"]
 }
