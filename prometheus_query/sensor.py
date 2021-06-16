@@ -15,7 +15,6 @@ from homeassistant.const import (
 
 from prometheus_client import Summary
 
-DOMAIN = 'prometheus'
 CONF_PROMETHEUS_URL = 'prometheus_url'
 CONF_PROMETHEUS_QUERY = 'prometheus_query'
 SCAN_INTERVAL = timedelta(seconds=600)

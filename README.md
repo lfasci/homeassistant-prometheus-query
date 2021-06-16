@@ -8,7 +8,7 @@ To enable it, add the following lines to your `configuration.yaml`:
 ```yaml
 # Example configuration.yaml entry
 sensor:
-  - platform: prometheus-query
+  - platform: prometheus_query
     name: Temperature Pisa
     prometheus_url: http://localhost:9090
     prometheus_query: temperature{location="Pisa",province="PI",region="Tuscany"}
