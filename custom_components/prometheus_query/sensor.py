@@ -12,11 +12,16 @@ from homeassistant.const import (
     CONF_UNIT_OF_MEASUREMENT,
     STATE_UNKNOWN,
 )
+from homeassistant.components.sensor import (
+    DEVICE_CLASSES_SCHEMA,
+    STATE_CLASSES_SCHEMA,
+)
 
 from prometheus_client import Summary
 
 CONF_PROMETHEUS_URL = 'prometheus_url'
 CONF_PROMETHEUS_QUERY = 'prometheus_query'
+CONF_STATE_CLASS = 'state_class'
 SCAN_INTERVAL = timedelta(seconds=600)
 
 _LOGGER = logging.getLogger(__name__)
@@ -27,6 +32,7 @@ PLATFORM_SCHEMA = PLATFORM_SCHEMA.extend({
     vol.Required(CONF_PROMETHEUS_QUERY): cv.string,
     vol.Required(CONF_NAME): cv.string,
     vol.Optional(CONF_UNIT_OF_MEASUREMENT): cv.string,
+    vol.Optional(CONF_STATE_CLASS): STATE_CLASSES_SCHEMA,
 })
 
 def setup_platform(hass, config, add_entities, discovery_info=None):
@@ -36,6 +42,7 @@ def setup_platform(hass, config, add_entities, discovery_info=None):
         'query': str(config.get(CONF_PROMETHEUS_QUERY)),
         'name': str(config.get(CONF_NAME)),
         'unit': str(config.get(CONF_UNIT_OF_MEASUREMENT)),
+        'state_class': str(config.get(CONF_STATE_CLASS)),
     }
     add_entities([PrometheusQuery(prom_data)], True)
 
@@ -49,6 +56,7 @@ class PrometheusQuery(Entity):
         self._name = prom_data["name"]
         self._state = None
         self._unit_of_measurement = prom_data["unit"]
+        self._state_class = prom_data["state_class"]
 
     @property
     def name(self):
@@ -64,6 +72,11 @@ class PrometheusQuery(Entity):
     def unit_of_measurement(self):
         """Return the unit of measurement."""
         return self._unit_of_measurement
+    
+    @property
+    def state_class(self):
+        """Return the state_class of the sensor"""
+        return self._state_class
 
     def update(self):
         """Fetch new state data for the sensor.
