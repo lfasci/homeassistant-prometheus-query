@@ -6,17 +6,24 @@ import homeassistant.helpers.config_validation as cv
 from datetime import timedelta
 from homeassistant.helpers.config_validation import PLATFORM_SCHEMA
 from homeassistant.helpers.entity import Entity
+from homeassistant.components.sensor import SensorEntity
 from homeassistant.util import Throttle
 from homeassistant.const import (
     CONF_NAME,
     CONF_UNIT_OF_MEASUREMENT,
     STATE_UNKNOWN,
 )
+from homeassistant.components.sensor import (
+    DEVICE_CLASSES_SCHEMA,
+    STATE_CLASSES_SCHEMA,
+)
 
 from prometheus_client import Summary
 
 CONF_PROMETHEUS_URL = 'prometheus_url'
 CONF_PROMETHEUS_QUERY = 'prometheus_query'
+CONF_STATE_CLASS = 'state_class'
+CONF_UNIQUE_ID = 'unique_id'
 SCAN_INTERVAL = timedelta(seconds=600)
 
 _LOGGER = logging.getLogger(__name__)
@@ -27,6 +34,8 @@ PLATFORM_SCHEMA = PLATFORM_SCHEMA.extend({
     vol.Required(CONF_PROMETHEUS_QUERY): cv.string,
     vol.Required(CONF_NAME): cv.string,
     vol.Optional(CONF_UNIT_OF_MEASUREMENT): cv.string,
+    vol.Optional(CONF_STATE_CLASS): STATE_CLASSES_SCHEMA,
+    vol.Optional(CONF_UNIQUE_ID): cv.string,
 })
 
 def setup_platform(hass, config, add_entities, discovery_info=None):
@@ -36,34 +45,26 @@ def setup_platform(hass, config, add_entities, discovery_info=None):
         'query': str(config.get(CONF_PROMETHEUS_QUERY)),
         'name': str(config.get(CONF_NAME)),
         'unit': str(config.get(CONF_UNIT_OF_MEASUREMENT)),
+        'state_class': str(config.get(CONF_STATE_CLASS)),
+        'unique_id': str(config.get(CONF_UNIQUE_ID)),
     }
+
     add_entities([PrometheusQuery(prom_data)], True)
 
 
-class PrometheusQuery(Entity):
-    """Representation of a Sensor."""
+class PrometheusQuery(SensorEntity):
+    """Representation of a Sensor based on Prometheus"""
     def __init__(self, prom_data):
         """Initialize the sensor."""
         self._url = prom_data["url"]
         self._query = prom_data["query"]
-        self._name = prom_data["name"]
+        self._attr_name = prom_data["name"]
         self._state = None
-        self._unit_of_measurement = prom_data["unit"]
-
-    @property
-    def name(self):
-        """Return the name of the sensor."""
-        return self._name
-
-    @property
-    def state(self):
-        """Return the state of the sensor."""
-        return self._state
-
-    @property
-    def unit_of_measurement(self):
-        """Return the unit of measurement."""
-        return self._unit_of_measurement
+        self._attr_native_unit_of_measurement = prom_data["unit"]
+        self._attr_state_class = prom_data["state_class"]
+        self._attr_unique_id = f"${prom_data['url']}$${prom_data['query']}"
+        if prom_data["unique_id"] is not None:
+            self._attr_unique_id = prom_data["unique_id"]
 
     def update(self):
         """Fetch new state data for the sensor.
@@ -73,8 +74,9 @@ class PrometheusQuery(Entity):
             response = requests.get(self._url, params={'query': self._query})
             if (response):
                 results = response.json()['data']['result']
-                self._state = results[0]['value'][1]
+                self._attr_native_value = results[0]['value'][1]
             else:
-                self._state = STATE_UNKNOWN
+                self._attr_native_value = STATE_UNKNOWN
+            self._attr_state = self._attr_native_value
         except URLCallError:
           _LOGGER.error("Error when retrieving update data")

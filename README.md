@@ -13,6 +13,7 @@ sensor:
     prometheus_url: http://localhost:9090
     prometheus_query: temperature{location="Pisa",province="PI",region="Tuscany"}
     unit_of_measurement: "°C"
+    state_class: total_increasing
 ```
 
 ### Configuration Variables
@@ -32,5 +33,10 @@ sensor:
 -  unit_of_measurement
 
   (string)(Optional) Defines the unit of measurement of the sensor, if any.
+  
+- state_class
+
+  (string)(Optional) Defines the type of sensor. `measurement` for metrics that are gauges,
+                     `total_increasing` for metrics that are counters.
 
 It's a custom component so it must be downloaded under /custom_components folder.
