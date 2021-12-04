@@ -11,7 +11,7 @@ To enable it, add the following lines to your `configuration.yaml`:
 sensor:
   - platform: prometheus_query
     name: Temperature Pisa
-    entity_id: sensoEntityId
+    unique_id: sensoEntityId
     prometheus_url: http://localhost:9090
     prometheus_query: temperature{location="Pisa",province="PI",region="Tuscany"}
     unit_of_measurement: "°C"
@@ -24,9 +24,9 @@ sensor:
   
   (string)(Required) Name of the sensor..
 
-- entity_id: sensor Entity Id (See home assitant docs)
+- unique_id: sensor Entity Id (See home assitant docs)
   
-  (string)(Required if  using more than one senso) Id of the sensor..
+  (string)(Required if using more than one sensor) Id of the sensor..
 
 - prometheus_url
   
@@ -43,5 +43,10 @@ sensor:
 - state_class
   
   (string)(Optional) Defines the type of sensor. `measurement` for metrics that are gauges,`total_increasing` for metrics that are counters.
+
+- device_class
+
+  (string)(Optional) Defines the type of device. see [Here](https://github.com/home-assistant/core/blob/master/homeassistant/components/sensor/__init__.py) for device types, such as `energy`, `battery`, `temperature`
+
 
 It's a custom component so it must be downloaded under /custom_components folder.
