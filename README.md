@@ -11,11 +11,12 @@ To enable it, add the following lines to your `configuration.yaml`:
 sensor:
   - platform: prometheus_query
     name: Temperature Pisa
-    unique_id: sensoEntityId
+    unique_id: sensorEntityId
     prometheus_url: http://localhost:9090
     prometheus_query: temperature{location="Pisa",province="PI",region="Tuscany"}
     unit_of_measurement: "°C"
     state_class: total_increasing
+    device_class: temperature
 ```
 
 ### Configuration Variables
