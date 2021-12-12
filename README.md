@@ -8,14 +8,25 @@ To enable it, add the following lines to your `configuration.yaml`:
 
 ```yaml
 # Example configuration.yaml entry
-sensor:
-  - platform: prometheus_query
-    name: Temperature Pisa
-    entity_id: sensoEntityId
+
+    platform: prometheus_query
+    name: "Temperature Pisa"
+    unique_id: "tempPisa"
     prometheus_url: http://localhost:9090
-    prometheus_query: temperature{location="Pisa",province="PI",region="Tuscany"}
+    prometheus_query: temperature{job="cfrt",location=~"Pisa Fac Agraria.*",province="PI",region="Toscana"}
     unit_of_measurement: "°C"
-    state_class: total_increasing
+    platform: prometheus_query
+    name: "Temperature Cecina"
+    unique_id: "tempCecina"
+    prometheus_url: http://localhost:9090
+    prometheus_query: temperature{job="cfrt",location=~"Cecina.*",province="LI",region="Toscana"}
+    unit_of_measurement: "°C"
+    platform: prometheus_query
+    name: "Wind Quercianella"
+    unique_id: "windQuercianella"
+    prometheus_url: http://localhost:9090
+    prometheus_query: wind_speed{job="cfrt",location="Quercianella",province="LI",region="Toscana"} * 3.6
+
 ```
 
 ### Configuration Variables
@@ -24,7 +35,7 @@ sensor:
   
   (string)(Required) Name of the sensor..
 
-- entity_id: sensor Entity Id (See home assitant docs)
+- unique_id: sensor Id (See home assitant docs)
   
   (string)(Required if  using more than one senso) Id of the sensor..
 
