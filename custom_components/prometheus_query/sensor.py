@@ -23,6 +23,7 @@ from prometheus_client import Summary
 CONF_PROMETHEUS_URL = 'prometheus_url'
 CONF_PROMETHEUS_QUERY = 'prometheus_query'
 CONF_STATE_CLASS = 'state_class'
+CONF_DEVICE_CLASS = 'device_class'
 CONF_UNIQUE_ID = 'unique_id'
 SCAN_INTERVAL = timedelta(seconds=600)
 
@@ -35,6 +36,7 @@ PLATFORM_SCHEMA = PLATFORM_SCHEMA.extend({
     vol.Required(CONF_NAME): cv.string,
     vol.Optional(CONF_UNIT_OF_MEASUREMENT): cv.string,
     vol.Optional(CONF_STATE_CLASS): STATE_CLASSES_SCHEMA,
+    vol.Optional(CONF_DEVICE_CLASS): DEVICE_CLASSES_SCHEMA,
     vol.Optional(CONF_UNIQUE_ID): cv.string,
 })
 
@@ -46,6 +48,7 @@ def setup_platform(hass, config, add_entities, discovery_info=None):
         'name': str(config.get(CONF_NAME)),
         'unit': str(config.get(CONF_UNIT_OF_MEASUREMENT)),
         'state_class': str(config.get(CONF_STATE_CLASS)),
+        'device_class': str(config.get(CONF_DEVICE_CLASS)),
         'unique_id': str(config.get(CONF_UNIQUE_ID)),
     }
 
@@ -62,6 +65,7 @@ class PrometheusQuery(SensorEntity):
         self._state = None
         self._attr_native_unit_of_measurement = prom_data["unit"]
         self._attr_state_class = prom_data["state_class"]
+        self._attr_device_class = prom_data["device_class"]
         self._attr_unique_id = f"${prom_data['url']}$${prom_data['query']}"
         if prom_data["unique_id"] is not None:
             self._attr_unique_id = prom_data["unique_id"]
