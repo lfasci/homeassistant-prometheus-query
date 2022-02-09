@@ -76,11 +76,13 @@ class PrometheusQuery(SensorEntity):
         """
         try:
             response = requests.get(self._url, params={'query': self._query})
+            self._attr_native_value = STATE_UNKNOWN
             if (response):
                 results = response.json()['data']['result']
-                self._attr_native_value = results[0]['value'][1]
-            else:
-                self._attr_native_value = STATE_UNKNOWN
+                if(results):
+                    self._attr_native_value = results[0]['value'][1]
+
             self._attr_state = self._attr_native_value
-        except URLCallError:
+
+        except requests.exceptions.RequestException as e:
           _LOGGER.error("Error when retrieving update data")
