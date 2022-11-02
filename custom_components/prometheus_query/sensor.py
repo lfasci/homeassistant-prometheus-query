@@ -1,33 +1,35 @@
 from __future__ import annotations
 
 import logging
-from typing import Optional, Union
 import voluptuous as vol
 import async_timeout
-from homeassistant.helpers.aiohttp_client import async_get_clientsession
 import homeassistant.helpers.config_validation as cv
+
+from typing import Optional, Union
 from datetime import timedelta
 from dataclasses import dataclass, field
-from homeassistant.helpers.config_validation import PLATFORM_SCHEMA
-from homeassistant.components.sensor import SensorEntity
 from homeassistant.core import HomeAssistant, callback
+from homeassistant.util import slugify
 from homeassistant.const import (
     CONF_NAME,
     CONF_UNIT_OF_MEASUREMENT,
+    CONF_SCAN_INTERVAL,
     STATE_UNKNOWN,
 )
+from homeassistant.helpers.typing import ConfigType, DiscoveryInfoType
 from homeassistant.components.sensor import (
     DEVICE_CLASSES_SCHEMA,
     STATE_CLASSES_SCHEMA,
+    SensorEntity,
 )
-from homeassistant.helpers.typing import ConfigType, DiscoveryInfoType
+from homeassistant.helpers.aiohttp_client import async_get_clientsession
 from homeassistant.helpers.entity_platform import AddEntitiesCallback
+from homeassistant.helpers.config_validation import PLATFORM_SCHEMA
 from homeassistant.helpers.update_coordinator import (
     CoordinatorEntity,
     DataUpdateCoordinator,
     UpdateFailed,
 )
-from homeassistant.util import slugify
 
 CONF_PROMETHEUS_URL = "prometheus_url"
 CONF_PROMETHEUS_QUERY = "prometheus_query"
@@ -36,7 +38,6 @@ CONF_DEVICE_CLASS = "device_class"
 CONF_UNIQUE_ID = "unique_id"
 CONF_MONITORED_INSTANCES = "monitored_instances"
 CONF_INSTANCE_NAME = "instance_name"
-SCAN_INTERVAL = timedelta(seconds=20)
 
 _LOGGER = logging.getLogger(__name__)
 
@@ -57,6 +58,11 @@ PLATFORM_SCHEMA = PLATFORM_SCHEMA.extend(
         vol.Optional(CONF_STATE_CLASS): STATE_CLASSES_SCHEMA,
         vol.Optional(CONF_DEVICE_CLASS): DEVICE_CLASSES_SCHEMA,
         vol.Optional(CONF_UNIQUE_ID): cv.string,
+        vol.Optional(
+            CONF_SCAN_INTERVAL, msg="polling interval", default=timedelta(seconds=20)
+        ): vol.All(
+            cv.time_period, vol.Range(min=timedelta(days=0), max=timedelta(days=1))
+        ),
         vol.Optional(CONF_MONITORED_INSTANCES, default=[]): vol.All(
             cv.ensure_list, [INSTANCE_SCHEMA]
         ),
@@ -73,6 +79,7 @@ class PromEntryData:
     state_class: str
     device_class: str
     unique_id: str
+    update_interval: timedelta
     instance_mapper: dict[str, InstanceMapItem] = field(default_factory=dict)
 
 
@@ -106,6 +113,7 @@ async def async_setup_platform(
         state_class=str(config.get(CONF_STATE_CLASS)),
         device_class=str(config.get(CONF_DEVICE_CLASS)),
         unique_id=str(config.get(CONF_UNIQUE_ID)),
+        update_interval=config.get(CONF_SCAN_INTERVAL),
         instance_mapper=parse_instance_mapping,
     )
 
@@ -144,7 +152,7 @@ class PrometheusQueryCoordinator(DataUpdateCoordinator):
             # Name of the data. For logging purposes.
             name="My sensor",
             # Polling interval. Will only be polled if there are subscribers.
-            update_interval=timedelta(seconds=20),
+            update_interval=prom_data.update_interval,
         )
         self.data: dict[str, Union[float, int]]
         self.url = prom_data.url
