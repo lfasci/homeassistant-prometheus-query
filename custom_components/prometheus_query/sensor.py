@@ -172,20 +172,29 @@ class PrometheusQueryCoordinator(DataUpdateCoordinator):
                     raw_fetch_data: list[dict] = (
                         (await r.json()).get("data", {}).get("result", [])
                     )
-                    fetched_dict: dict[str, str] = {
-                        fetched_item["metric"][self.unique_instance_key]: fetched_item[
-                            "value"
-                        ][1]
-                        for fetched_item in raw_fetch_data
-                    }
-                    parsed_data = fetched_dict
                     if len(self.instance_mapper) > 0:
+                        fetched_dict: dict[str, str] = {
+                            fetched_item["metric"][
+                                self.unique_instance_key
+                            ]: fetched_item["value"][1]
+                            for fetched_item in raw_fetch_data
+                        }
+                        parsed_data = fetched_dict
+                        _LOGGER.debug(
+                            f"parsed_data with map before filter=\n{parsed_data}"
+                        )
                         # filter only used instance only when we use mapper
                         parsed_data = {
                             instance: value
                             for instance, value in fetched_dict.items()
                             if instance in self.instance_mapper
                         }
+                    else:
+                        parsed_data = {
+                            i: fetched_item["value"][1]
+                            for i, fetched_item in enumerate(raw_fetch_data)
+                        }
+                    _LOGGER.debug(f"parsed_data after filter=\n{parsed_data}")
                     return parsed_data
         except Exception as err:
             raise UpdateFailed(f"Error communicating with API: {err}")
@@ -247,7 +256,10 @@ class PrometheusQuerySingleEntity(PrometheusQueryEntity):
     @callback
     def _handle_coordinator_update(self) -> None:
         """Handle updated data from the coordinator."""
-        fetched_values = list(self.coordinator.data.values())
+        fetched_data = self.coordinator.data
+        if fetched_data is None:
+            return
+        fetched_values = list(fetched_data.values())
         self._attr_native_value = (
             STATE_UNKNOWN if len(fetched_values) <= 0 else fetched_values[0]
         )
