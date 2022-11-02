@@ -36,6 +36,7 @@ CONF_PROMETHEUS_QUERY = "prometheus_query"
 CONF_STATE_CLASS = "state_class"
 CONF_DEVICE_CLASS = "device_class"
 CONF_UNIQUE_ID = "unique_id"
+CONF_UNIQUE_INSTANCE_KEY = "unique_instance_key"
 CONF_MONITORED_INSTANCES = "monitored_instances"
 CONF_INSTANCE_NAME = "instance_name"
 
@@ -63,6 +64,7 @@ PLATFORM_SCHEMA = PLATFORM_SCHEMA.extend(
         ): vol.All(
             cv.time_period, vol.Range(min=timedelta(days=0), max=timedelta(days=1))
         ),
+        vol.Optional(CONF_UNIQUE_INSTANCE_KEY, default="instance"): cv.string,
         vol.Optional(CONF_MONITORED_INSTANCES, default=[]): vol.All(
             cv.ensure_list, [INSTANCE_SCHEMA]
         ),
@@ -80,6 +82,7 @@ class PromEntryData:
     device_class: str
     unique_id: str
     update_interval: timedelta
+    unique_instance_key: str
     instance_mapper: dict[str, InstanceMapItem] = field(default_factory=dict)
 
 
@@ -89,7 +92,6 @@ class InstanceMapItem:
     entity_name: str
 
 
-# def setup_platform(
 async def async_setup_platform(
     hass: HomeAssistant,
     config: ConfigType,
@@ -114,10 +116,9 @@ async def async_setup_platform(
         device_class=str(config.get(CONF_DEVICE_CLASS)),
         unique_id=str(config.get(CONF_UNIQUE_ID)),
         update_interval=config.get(CONF_SCAN_INTERVAL),
+        unique_instance_key=config.get(CONF_UNIQUE_INSTANCE_KEY),
         instance_mapper=parse_instance_mapping,
     )
-
-    _LOGGER.debug(f"prom_data is \n{prom_data}")
 
     coordinator = PrometheusQueryCoordinator(hass, prom_data)
     async_add_entities(
@@ -142,21 +143,20 @@ def construct_entities(
 
 
 class PrometheusQueryCoordinator(DataUpdateCoordinator):
-    """My custom coordinator."""
+    """prometheus query coordinator."""
 
     def __init__(self, hass: HomeAssistant, prom_data: PromEntryData):
-        """Initialize my coordinator."""
+        """Initialize prometheus query coordinator."""
         super().__init__(
             hass,
             _LOGGER,
-            # Name of the data. For logging purposes.
-            name="My sensor",
-            # Polling interval. Will only be polled if there are subscribers.
+            name=prom_data.name,
             update_interval=prom_data.update_interval,
         )
         self.data: dict[str, Union[float, int]]
         self.url = prom_data.url
         self.query = prom_data.query
+        self.unique_instance_key = prom_data.unique_instance_key
         self.instance_mapper = prom_data.instance_mapper
 
     async def _async_update_data(self):
@@ -172,13 +172,13 @@ class PrometheusQueryCoordinator(DataUpdateCoordinator):
                     raw_fetch_data: list[dict] = (
                         (await r.json()).get("data", {}).get("result", [])
                     )
-                    # _LOGGER.debug(f"Raw fetched data is\n{raw_fetch_data}")
                     fetched_dict: dict[str, str] = {
-                        fetched_item["metric"]["instance"]: fetched_item["value"][1]
+                        fetched_item["metric"][self.unique_instance_key]: fetched_item[
+                            "value"
+                        ][1]
                         for fetched_item in raw_fetch_data
                     }
                     parsed_data = fetched_dict
-                    _LOGGER.debug(f"before filter={parsed_data}")
                     if len(self.instance_mapper) > 0:
                         # filter only used instance only when we use mapper
                         parsed_data = {
@@ -186,7 +186,6 @@ class PrometheusQueryCoordinator(DataUpdateCoordinator):
                             for instance, value in fetched_dict.items()
                             if instance in self.instance_mapper
                         }
-                    _LOGGER.debug(f"after filter={parsed_data}")
                     return parsed_data
         except Exception as err:
             raise UpdateFailed(f"Error communicating with API: {err}")
@@ -221,9 +220,6 @@ class PrometheusQueryEntity(CoordinatorEntity, SensorEntity):
             (prom_data.unique_id or f"${prom_data.url}$${prom_data.query}")
             + (f"$${instance_name}" if instance_name is not None else "")
         )
-        _LOGGER.debug(
-            f"Created a PrometheusQueryEntity with instance_name={instance_name}"
-        )
 
     @callback
     def _handle_coordinator_update(self) -> None:
@@ -234,24 +230,6 @@ class PrometheusQueryEntity(CoordinatorEntity, SensorEntity):
         self._attr_native_value = fetched_data.get(self._instance_name, STATE_UNKNOWN)
         self._attr_state = self._attr_native_value
         self.async_write_ha_state()
-
-    # def update(self):
-    #     """Fetch new state data for the sensor.
-    #     This is the only method that should fetch new data for Home Assistant.
-    #     """
-    #     try:
-    #         response = requests.get(self._url, params={"query": self._query})
-    #         self._attr_native_value = STATE_UNKNOWN
-    #         if response:
-    #             results = response.json()["data"]["result"]
-    #             _LOGGER.debug(f"result is {results}")
-    #             if results:
-    #                 self._attr_native_value = results[0]["value"][1]
-
-    #         self._attr_state = self._attr_native_value
-
-    #     except requests.exceptions.RequestException as e:
-    #         _LOGGER.error("Error when retrieving update data")
 
 
 class PrometheusQuerySingleEntity(PrometheusQueryEntity):
@@ -265,7 +243,6 @@ class PrometheusQuerySingleEntity(PrometheusQueryEntity):
     ):
         super().__init__(coordinator, prom_data, instance_name)
         self._attr_name = prom_data.name
-        _LOGGER.debug("Created a PrometheusQuerySingleEntity")
 
     @callback
     def _handle_coordinator_update(self) -> None:
