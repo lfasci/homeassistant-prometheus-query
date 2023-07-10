@@ -14,7 +14,6 @@ from homeassistant.const import (
     CONF_NAME,
     CONF_UNIT_OF_MEASUREMENT,
     CONF_SCAN_INTERVAL,
-    STATE_UNKNOWN,
 )
 from homeassistant.helpers.typing import ConfigType, DiscoveryInfoType
 from homeassistant.components.sensor import (
@@ -236,7 +235,7 @@ class PrometheusQueryEntity(CoordinatorEntity, SensorEntity):
         fetched_data = self.coordinator.data
         if fetched_data is None:
             return
-        self._attr_native_value = fetched_data.get(self._instance_name, STATE_UNKNOWN)
+        self._attr_native_value = fetched_data.get(self._instance_name, None)
         self._attr_state = self._attr_native_value
         self.async_write_ha_state()
 
@@ -261,7 +260,7 @@ class PrometheusQuerySingleEntity(PrometheusQueryEntity):
             return
         fetched_values = list(fetched_data.values())
         self._attr_native_value = (
-            STATE_UNKNOWN if len(fetched_values) <= 0 else fetched_values[0]
+            None if len(fetched_values) <= 0 else fetched_values[0]
         )
         self._attr_state = self._attr_native_value
         self.async_write_ha_state()
